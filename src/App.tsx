@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import {
   DateRangeFacet,
@@ -7,16 +7,62 @@ import {
   RefinementSelectFacet,
 } from "@searchkit/sdk";
 import { useSearchkitVariables } from "@searchkit/client";
+import Searchkit from "@searchkit/sdk";
 import { useSearchkitSDK } from "@searchkit/sdk/lib/esm/react-hooks";
+import {
+  EuiFlexGrid,
+  EuiFlexItem,
+  EuiFlexGroup,
+  EuiTitle,
+  EuiText,
+  EuiPage,
+  EuiPageSideBar,
+  EuiHorizontalRule,
+  EuiPageBody,
+  EuiPageHeader,
+  EuiPageHeaderSection,
+  EuiPageContent,
+  EuiPageContentHeader,
+  EuiPageContentHeaderSection,
+  EuiPageContentBody,
+  Pagination,
+} from "@elastic/eui";
+import {
+  FacetsList,
+  SearchBar,
+  SelectedFilters,
+  ResetSearchButton,
+} from "@searchkit/elastic-ui";
 
-const config: any = {
+interface ConfigData {
+  host: string;
+  connectionOptions: {
+    apiKey: string;
+  };
+  index: string;
+  hits: {
+    fields: string[];
+  };
+  query: any;
+  facets: any[];
+}
+
+const config: ConfigData = {
   host: "https://commerce-demo.es.us-east4.gcp.elastic-cloud.com:9243",
   connectionOptions: {
     apiKey: "NWF4c2VYOEJzRDhHMzlEX1JDejU6YnJXaS1XWjlSZ2F5ek1Cc3V4aXV6dw==",
   },
   index: "imdb_movies",
   hits: {
-    fields: ["title"],
+    fields: [
+      "title",
+      "genres",
+      "directors",
+      "writers",
+      "actors",
+      "countries",
+      "plot",
+    ],
   },
   query: new MultiMatchQuery({
     fields: [
@@ -102,16 +148,45 @@ const config: any = {
   ],
 };
 
-function App() {
-  const variables = useSearchkitVariables();
-  const { results, loading } = useSearchkitSDK(config, variables);
-  results && console.log(results);
+const App = () => {
+  const [data, setData] = useState<any>();
 
+  const dataf = async () => {
+    const request = Searchkit(config);
+    const response = await request
+      // .setFilters([{ identifier: "metascore", min: 10, max: 20 }])
+      .setSortBy("released")
+      .execute({
+        facets: true,
+        hits: {
+          size: 2000,
+          from: 0,
+        },
+      });
+    setData(response);
+    return response;
+  };
+
+  useEffect(() => {
+    dataf();
+  }, []);
+
+  data && console.log(data);
+
+  const Facets = FacetsList([]);
   return (
-    <div className="App">
-      <h1>Hello</h1>
-    </div>
+    <>
+      <EuiPage style={{ display: "flex" }}>
+        <EuiPageSideBar>
+          <h1>Hello</h1>
+          <SearchBar loading={false} />
+          {/* <SelectedFilters data={data} loading={true} /> */}
+          <Facets data={data} loading={true} />
+        </EuiPageSideBar>
+        <EuiPageBody>Hello</EuiPageBody>
+      </EuiPage>
+    </>
   );
-}
+};
 
 export default App;
